@@ -5,27 +5,30 @@
 
 "use strict";
 
-const EC_GROUP_ORDER = Buffer.from('fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141', 'hex');
+const EC_GROUP_ORDER = Buffer.from(
+  "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+  "hex"
+);
 const ZERO32 = Buffer.alloc(32, 0);
 
-var promise = typeof Promise === "undefined" ?
-              require("es6-promise").Promise :
-              Promise;
+var promise =
+  typeof Promise === "undefined" ? require("es6-promise").Promise : Promise;
 var crypto = require("crypto");
 var secp256k1 = require("secp256k1");
 var ecdh = require("./build/Release/ecdh");
 
-function isScalar (x) {
+function isScalar(x) {
   return Buffer.isBuffer(x) && x.length === 32;
 }
 
 function isValidPrivateKey(privateKey) {
-  if (!isScalar(privateKey))
-  {
+  if (!isScalar(privateKey)) {
     return false;
   }
-  return privateKey.compare(ZERO32) > 0 && // > 0
-  privateKey.compare(EC_GROUP_ORDER) < 0; // < G
+  return (
+    privateKey.compare(ZERO32) > 0 && // > 0
+    privateKey.compare(EC_GROUP_ORDER) < 0
+  ); // < G
 }
 
 function assert(condition, message) {
@@ -63,12 +66,12 @@ function equalConstTime(b1, b2) {
   }
   var res = 0;
   for (var i = 0; i < b1.length; i++) {
-    res |= b1[i] ^ b2[i];  // jshint ignore:line
+    res |= b1[i] ^ b2[i]; // jshint ignore:line
   }
   return res === 0;
 }
 
-function pad32(msg){
+function pad32(msg) {
   var buf;
   if (msg.length < 32) {
     buf = Buffer.alloc(32);
@@ -85,7 +88,7 @@ function pad32(msg){
  * @return {Buffer} A 32-byte private key.
  * @function
  */
-exports.generatePrivate = function() {
+exports.generatePrivate = function () {
   var privateKey = crypto.randomBytes(32);
   while (!isValidPrivateKey(privateKey)) {
     privateKey = crypto.randomBytes(32);
@@ -99,23 +102,24 @@ exports.generatePrivate = function() {
  * @return {Buffer} A 65-byte public key.
  * @function
  */
-var getPublic = exports.getPublic = function(privateKey) {
+var getPublic = (exports.getPublic = function (privateKey) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
   var compressed = secp256k1.publicKeyCreate(privateKey);
   return secp256k1.publicKeyConvert(compressed, false);
-};
+});
 
 /**
  * Get compressed version of public key.
  */
-var getPublicCompressed = exports.getPublicCompressed = function(privateKey) { // jshint ignore:line
+var getPublicCompressed = (exports.getPublicCompressed = function (privateKey) {
+  // jshint ignore:line
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
   return secp256k1.publicKeyCreate(privateKey);
-};
+});
 
 /**
  * Create an ECDSA signature.
@@ -124,8 +128,8 @@ var getPublicCompressed = exports.getPublicCompressed = function(privateKey) { /
  * @return {Promise.<Buffer>} A promise that resolves with the
  * signature and rejects on bad key or message.
  */
-exports.sign = function(privateKey, msg) {
-  return new promise(function(resolve) {
+exports.sign = function (privateKey, msg) {
+  return new promise(function (resolve) {
     assert(privateKey.length === 32, "Bad private key");
     assert(isValidPrivateKey(privateKey), "Bad private key");
     assert(msg.length > 0, "Message should not be empty");
@@ -144,16 +148,16 @@ exports.sign = function(privateKey, msg) {
  * @return {Promise.<null>} A promise that resolves on correct signature
  * and rejects on bad key or signature.
  */
-exports.verify = function(publicKey, msg, sig) {
-  return new promise(function(resolve, reject) {
+exports.verify = function (publicKey, msg, sig) {
+  return new promise(function (resolve, reject) {
     assert(msg.length > 0, "Message should not be empty");
     assert(msg.length <= 32, "Message is too long");
     msg = pad32(msg);
     sig = secp256k1.signatureImport(sig);
     if (secp256k1.verify(msg, sig, publicKey)) {
-     resolve(null);
+      resolve(null);
     } else {
-     reject(new Error("Bad signature"));
+      reject(new Error("Bad signature"));
     }
   });
 };
@@ -165,13 +169,13 @@ exports.verify = function(publicKey, msg, sig) {
  * @return {Promise.<Buffer>} A promise that resolves with the derived
  * shared secret (Px, 32 bytes) and rejects on bad key.
  */
-var derive = exports.derive = function(privateKeyA, publicKeyB) {
-  return new promise(function(resolve) {
+var derive = (exports.derive = function (privateKeyA, publicKeyB) {
+  return new promise(function (resolve) {
     assert(privateKeyA.length === 32, "Bad private key");
     assert(isValidPrivateKey(privateKeyA), "Bad private key");
     resolve(ecdh.derive(privateKeyA, publicKeyB));
   });
-};
+});
 
 /**
  * Input/output structure for ECIES operations.
@@ -186,26 +190,25 @@ var derive = exports.derive = function(privateKeyA, publicKeyB) {
  * Encrypt message for given recepient's public key.
  * @param {Buffer} publicKeyTo - Recipient's public key (65 bytes)
  * @param {Buffer} msg - The message being encrypted
- * @param {?{?iv: Buffer, ?ephemPrivateKey: Buffer}} opts - You may also
+ * @param {?{?iv: Buffer, ?ephemPrivateKey: Buffer}} [opts] - You may also
  * specify initialization vector (16 bytes) and ephemeral private key
  * (32 bytes) to get deterministic results.
  * @return {Promise.<Ecies>} - A promise that resolves with the ECIES
  * structure on successful encryption and rejects on failure.
  */
-exports.encrypt = function(publicKeyTo, msg, opts) {
+exports.encrypt = function (publicKeyTo, msg, opts) {
   opts = opts || {};
   // Tmp variable to save context from flat promises;
   var ephemPublicKey;
-  return new promise(function(resolve) {
+  return new promise(function (resolve) {
     var ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
     // There is a very unlikely possibility that it is not a valid key
-    while(!isValidPrivateKey(ephemPrivateKey))
-    {
+    while (!isValidPrivateKey(ephemPrivateKey)) {
       ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
     }
     ephemPublicKey = getPublic(ephemPrivateKey);
     resolve(derive(ephemPrivateKey, publicKeyTo));
-  }).then(function(Px) {
+  }).then(function (Px) {
     var hash = sha512(Px);
     var iv = opts.iv || crypto.randomBytes(16);
     var encryptionKey = hash.slice(0, 32);
@@ -230,8 +233,8 @@ exports.encrypt = function(publicKeyTo, msg, opts) {
  * @return {Promise.<Buffer>} - A promise that resolves with the
  * plaintext on successful decryption and rejects on failure.
  */
-exports.decrypt = function(privateKey, opts) {
-  return derive(privateKey, opts.ephemPublicKey).then(function(Px) {
+exports.decrypt = function (privateKey, opts) {
+  return derive(privateKey, opts.ephemPublicKey).then(function (Px) {
     assert(privateKey.length === 32, "Bad private key");
     assert(isValidPrivateKey(privateKey), "Bad private key");
     var hash = sha512(Px);
@@ -240,9 +243,10 @@ exports.decrypt = function(privateKey, opts) {
     var dataToMac = Buffer.concat([
       opts.iv,
       opts.ephemPublicKey,
-      opts.ciphertext
+      opts.ciphertext,
     ]);
     var realMac = hmacSha256(macKey, dataToMac);
-    assert(equalConstTime(opts.mac, realMac), "Bad MAC"); return aes256CbcDecrypt(opts.iv, encryptionKey, opts.ciphertext);
+    assert(equalConstTime(opts.mac, realMac), "Bad MAC");
+    return aes256CbcDecrypt(opts.iv, encryptionKey, opts.ciphertext);
   });
 };

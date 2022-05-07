@@ -8,7 +8,8 @@
     "install": "node-gyp rebuild || exit 0",
     "test": "mocha && jshint .",
     "m": "mocha",
-    "j": "jshint ."
+    "j": "jshint .",
+    "prepublishOnly": "tsc index.js --declaration --allowJs --emitDeclarationOnly"
   },
   "repository": {
     "type": "git",
@@ -36,10 +37,12 @@
   },
   "homepage": "https://github.com/nlindley/eccrypto",
   "devDependencies": {
+    "@types/node": "^17.0.31",
     "buffer-equal": "1.0.0",
     "chai": "4.3.6",
     "jshint": "2.13.4",
-    "mocha": "10.0.0"
+    "mocha": "10.0.0",
+    "typescript": "^4.6.4"
   },
   "dependencies": {
     "elliptic": "6.5.4",
@@ -47,5 +50,8 @@
     "nan": "2.15.0",
     "secp256k1": "^3.7.1"
   },
-  "optionalDependencies": {}
+  "files": [
+    "**/*.d.ts"
+  ],
+  "types": "index.d.ts"
 }
