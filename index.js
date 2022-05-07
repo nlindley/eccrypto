@@ -113,13 +113,13 @@ var getPublic = (exports.getPublic = function (privateKey) {
 /**
  * Get compressed version of public key.
  */
-var getPublicCompressed = (exports.getPublicCompressed = function (privateKey) {
+exports.getPublicCompressed = function (privateKey) {
   // jshint ignore:line
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
   return secp256k1.publicKeyCreate(privateKey);
-});
+};
 
 /**
  * Create an ECDSA signature.
