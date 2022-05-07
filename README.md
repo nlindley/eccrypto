@@ -1,6 +1,4 @@
-# eccrypto [![Build Status](https://travis-ci.org/bitchan/eccrypto.svg?branch=master)](https://travis-ci.org/bitchan/eccrypto)
-
-[![NPM](https://nodei.co/npm/eccrypto.png)](https://www.npmjs.com/package/eccrypto)
+# eccrypto
 
 JavaScript Elliptic curve cryptography library for both browserify and node.
 
@@ -12,11 +10,11 @@ There is currently not any isomorphic ECC library which provides ECDSA, ECDH and
 
 With the help of browserify `eccrypto` provides different implementations for Browser and Node.js with the same API. Because WebCryptoAPI defines asynchronous promise-driven API, the implementation for Node needs to use promises too.
 
-* Use Node.js crypto module/library bindings where possible
-* Use WebCryptoAPI where possible
-* Promise-driven API
-* Only secp256k1 curve, only SHA-512 (KDF), HMAC-SHA-256 (HMAC) and AES-256-CBC for ECIES
-* Compressed key support
+- Use Node.js crypto module/library bindings where possible
+- Use WebCryptoAPI where possible
+- Promise-driven API
+- Only secp256k1 curve, only SHA-512 (KDF), HMAC-SHA-256 (HMAC) and AES-256-CBC for ECIES
+- Compressed key support
 
 ### Native crypto API limitations
 
@@ -32,7 +30,7 @@ So we use [seck256k1](https://www.npmjs.com/package/secp256k1) library in Node f
 
 ## Possible future goals
 
-* Support other curves/KDF/MAC/symmetric encryption schemes
+- Support other curves/KDF/MAC/symmetric encryption schemes
 
 ## Usage
 
@@ -40,7 +38,7 @@ So we use [seck256k1](https://www.npmjs.com/package/secp256k1) library in Node f
 
 ```js
 var crypto = require("crypto");
-var eccrypto = require("eccrypto");
+var eccrypto = require("@nlindley/eccrypto");
 
 // A new random 32-byte private key.
 var privateKey = eccrypto.generatePrivate();
@@ -51,28 +49,31 @@ var str = "message to sign";
 // Always hash you message to sign!
 var msg = crypto.createHash("sha256").update(str).digest();
 
-eccrypto.sign(privateKey, msg).then(function(sig) {
+eccrypto.sign(privateKey, msg).then(function (sig) {
   console.log("Signature in DER format:", sig);
-  eccrypto.verify(publicKey, msg, sig).then(function() {
-    console.log("Signature is OK");
-  }).catch(function() {
-    console.log("Signature is BAD");
-  });
+  eccrypto
+    .verify(publicKey, msg, sig)
+    .then(function () {
+      console.log("Signature is OK");
+    })
+    .catch(function () {
+      console.log("Signature is BAD");
+    });
 });
 ```
 
 ### ECDH
 
 ```js
-var eccrypto = require("eccrypto");
+var eccrypto = require("@nlindley/eccrypto");
 
 var privateKeyA = eccrypto.generatePrivate();
 var publicKeyA = eccrypto.getPublic(privateKeyA);
 var privateKeyB = eccrypto.generatePrivate();
 var publicKeyB = eccrypto.getPublic(privateKeyB);
 
-eccrypto.derive(privateKeyA, publicKeyB).then(function(sharedKey1) {
-  eccrypto.derive(privateKeyB, publicKeyA).then(function(sharedKey2) {
+eccrypto.derive(privateKeyA, publicKeyB).then(function (sharedKey1) {
+  eccrypto.derive(privateKeyB, publicKeyA).then(function (sharedKey2) {
     console.log("Both shared keys are equal:", sharedKey1, sharedKey2);
   });
 });
@@ -81,7 +82,7 @@ eccrypto.derive(privateKeyA, publicKeyB).then(function(sharedKey1) {
 ### ECIES
 
 ```js
-var eccrypto = require("eccrypto");
+var eccrypto = require("@nlindley/eccrypto");
 
 var privateKeyA = eccrypto.generatePrivate();
 var publicKeyA = eccrypto.getPublic(privateKeyA);
@@ -89,27 +90,31 @@ var privateKeyB = eccrypto.generatePrivate();
 var publicKeyB = eccrypto.getPublic(privateKeyB);
 
 // Encrypting the message for B.
-eccrypto.encrypt(publicKeyB, Buffer.from("msg to b")).then(function(encrypted) {
-  // B decrypting the message.
-  eccrypto.decrypt(privateKeyB, encrypted).then(function(plaintext) {
-    console.log("Message to part B:", plaintext.toString());
+eccrypto
+  .encrypt(publicKeyB, Buffer.from("msg to b"))
+  .then(function (encrypted) {
+    // B decrypting the message.
+    eccrypto.decrypt(privateKeyB, encrypted).then(function (plaintext) {
+      console.log("Message to part B:", plaintext.toString());
+    });
   });
-});
 
 // Encrypting the message for A.
-eccrypto.encrypt(publicKeyA, Buffer.from("msg to a")).then(function(encrypted) {
-  // A decrypting the message.
-  eccrypto.decrypt(privateKeyA, encrypted).then(function(plaintext) {
-    console.log("Message to part A:", plaintext.toString());
+eccrypto
+  .encrypt(publicKeyA, Buffer.from("msg to a"))
+  .then(function (encrypted) {
+    // A decrypting the message.
+    eccrypto.decrypt(privateKeyA, encrypted).then(function (plaintext) {
+      console.log("Message to part A:", plaintext.toString());
+    });
   });
-});
 ```
 
 ## License
 
 eccrypto - JavaScript Elliptic curve cryptography library
 
-Written in 2014-2015 by Kagami Hiiragi <kagami@genshiken.org>
+Written in 2014-2015 by Kagami Hiiragi <kagami@genshiken.org>. Forked in 2022 by Nicholas Lindley <me@thisoneplace.com>.
 
 To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights to this software to the public domain worldwide. This software is distributed without any warranty.
 
