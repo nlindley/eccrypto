@@ -29,3 +29,5 @@ jobs:
         uses: GabrielBB/xvfb-action@v1
         with:
           run: yarn test
+        env:
+          ECCRYPTO_NO_FALLBACK: "1"
