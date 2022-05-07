@@ -24,8 +24,4 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile
       - name: Run tests
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: yarn test
-        env:
-          ECCRYPTO_NO_FALLBACK: "1"
+        run: yarn test
