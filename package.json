@@ -35,9 +35,9 @@
   ],
   "license": "CC0-1.0",
   "bugs": {
-    "url": "https://github.com/bitchan/eccrypto/issues"
+    "url": "https://github.com/nlindley/eccrypto/issues"
   },
-  "homepage": "https://github.com/bitchan/eccrypto",
+  "homepage": "https://github.com/nlindley/eccrypto",
   "devDependencies": {
     "browserify": "16.5.0",
     "buffer-equal": "1.0.0",
