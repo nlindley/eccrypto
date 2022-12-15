@@ -1,7 +1,11 @@
-const expect = require("chai").expect;
+const chai = require("chai");
+const chaiAsPromised = require("chai-as-promised");
 const createHash = require("crypto").createHash;
 const bufferEqual = require("buffer-equal");
 const eccrypto = require("./");
+
+const { expect } = chai;
+chai.use(chaiAsPromised);
 
 const msg = createHash("sha256").update("test").digest();
 const otherMsg = createHash("sha256").update("test2").digest();
@@ -22,22 +26,22 @@ privateKeyB.fill(3);
 const publicKeyB = eccrypto.getPublic(privateKeyB);
 const publicKeyBCompressed = eccrypto.getPublicCompressed(privateKeyB);
 
-describe("Key conversion", function () {
-  it("should allow to convert private key to public", function () {
+describe("Key conversion", () => {
+  it("should allow to convert private key to public", () => {
     expect(Buffer.isBuffer(publicKey)).to.be.true;
     expect(publicKey.toString("hex")).to.equal(
       "041b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f70beaf8f588b541507fed6a642c5ab42dfdf8120a7f639de5122d47a69a8e8d1"
     );
   });
 
-  it("should allow to convert private key to compressed public", function () {
+  it("should allow to convert private key to compressed public", () => {
     expect(Buffer.isBuffer(publicKeyCompressed)).to.be.true;
     expect(publicKeyCompressed.toString("hex")).to.equal(
       "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
     );
   });
 
-  it("should throw on invalid private key", function () {
+  it("should throw on invalid private key", () => {
     expect(eccrypto.getPublic.bind(null, Buffer.from("00", "hex"))).to.throw(
       Error
     );
@@ -45,37 +49,33 @@ describe("Key conversion", function () {
   });
 });
 
-describe("ECDSA", function () {
-  it("should allow to sign and verify message", function () {
-    return eccrypto.sign(privateKey, msg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      expect(sig.toString("hex")).to.equal(
-        "3044022078c15897a34de6566a0d396fdef660698c59fef56d34ee36bef14ad89ee0f6f8022016e02e8b7285d93feafafbe745702f142973a77d5c2fa6293596357e17b3b47c"
-      );
-      return eccrypto.verify(publicKey, msg, sig);
-    });
+describe("ECDSA", () => {
+  it("should allow to sign and verify message", async () => {
+    const sig = await eccrypto.sign(privateKey, msg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+    expect(sig.toString("hex")).to.equal(
+      "3044022078c15897a34de6566a0d396fdef660698c59fef56d34ee36bef14ad89ee0f6f8022016e02e8b7285d93feafafbe745702f142973a77d5c2fa6293596357e17b3b47c"
+    );
+    await eccrypto.verify(publicKey, msg, sig);
   });
 
-  it("should allow to sign and verify message using a compressed public key", function () {
-    return eccrypto.sign(privateKey, msg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      expect(sig.toString("hex")).to.equal(
-        "3044022078c15897a34de6566a0d396fdef660698c59fef56d34ee36bef14ad89ee0f6f8022016e02e8b7285d93feafafbe745702f142973a77d5c2fa6293596357e17b3b47c"
-      );
-      return eccrypto.verify(publicKeyCompressed, msg, sig);
-    });
+  it("should allow to sign and verify message using a compressed public key", async () => {
+    const sig = await eccrypto.sign(privateKey, msg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+    expect(sig.toString("hex")).to.equal(
+      "3044022078c15897a34de6566a0d396fdef660698c59fef56d34ee36bef14ad89ee0f6f8022016e02e8b7285d93feafafbe745702f142973a77d5c2fa6293596357e17b3b47c"
+    );
+    await eccrypto.verify(publicKeyCompressed, msg, sig);
   });
 
-  it("shouldn't verify incorrect signature", function (done) {
-    eccrypto.sign(privateKey, msg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      eccrypto.verify(publicKey, otherMsg, sig).catch(function () {
-        done();
-      });
-    });
+  it("shouldn't verify incorrect signature", async () => {
+    const sig = await eccrypto.sign(privateKey, msg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+    await expect(eccrypto.verify(publicKey, otherMsg, sig)).to.eventually.be
+      .rejected;
   });
 
-  it("should reject promise on invalid key when signing", function (done) {
+  it("should reject promise on invalid key when signing", async () => {
     const k4 = Buffer.from("test");
     const k192 = Buffer.from(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -85,132 +85,123 @@ describe("ECDSA", function () {
       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "hex"
     );
-    eccrypto.sign(k4, msg).catch(function () {
-      eccrypto.sign(k192, msg).catch(function () {
-        eccrypto.sign(k384, msg).catch(function () {
-          done();
-        });
-      });
-    });
+
+    await expect(eccrypto.sign(k4, msg)).to.eventually.be.rejected;
+    await expect(eccrypto.sign(k192, msg)).to.eventually.be.rejected;
+    await expect(eccrypto.sign(k384, msg)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on invalid key when verifying", function (done) {
-    eccrypto.sign(privateKey, msg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      eccrypto.verify(Buffer.from("test"), msg, sig).catch(function () {
-        const badKey = Buffer.alloc(65);
-        publicKey.copy(badKey);
-        badKey[0] ^= 1;
-        eccrypto.verify(badKey, msg, sig).catch(function () {
-          done();
-        });
-      });
-    });
+  it("should reject promise on invalid key when verifying", async () => {
+    const sig = await eccrypto.sign(privateKey, msg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+
+    await expect(eccrypto.verify(Buffer.from("test"), msg, sig)).to.eventually
+      .be.rejected;
+
+    const badKey = Buffer.alloc(65);
+    publicKey.copy(badKey);
+    badKey[0] ^= 1;
+
+    await expect(eccrypto.verify(badKey, msg, sig)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on invalid sig when verifying", function (done) {
-    eccrypto.sign(privateKey, msg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      sig[0] ^= 1;
-      eccrypto.verify(publicKey, msg, sig).catch(function () {
-        done();
-      });
-    });
+  it("should reject promise on invalid sig when verifying", async () => {
+    const sig = await eccrypto.sign(privateKey, msg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+
+    sig[0] ^= 1;
+
+    await expect(eccrypto.verify(publicKey, msg, sig)).to.eventually.be
+      .rejected;
   });
 
-  it("should allow to sign and verify messages less than 32 bytes", function () {
-    return eccrypto.sign(privateKey, shortMsg).then(function (sig) {
-      expect(Buffer.isBuffer(sig)).to.be.true;
-      expect(sig.toString("hex")).to.equal(
-        "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa"
-      );
-      return eccrypto.verify(publicKey, shortMsg, sig);
-    });
+  it("should allow to sign and verify messages less than 32 bytes", async () => {
+    const sig = await eccrypto.sign(privateKey, shortMsg);
+    expect(Buffer.isBuffer(sig)).to.be.true;
+    expect(sig.toString("hex")).to.equal(
+      "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa"
+    );
+    await eccrypto.verify(publicKey, shortMsg, sig);
   });
 
-  it("shouldn't sign and verify messages longer than 32 bytes", function (done) {
+  it("shouldn't sign and verify messages longer than 32 bytes", async () => {
     const longMsg = Buffer.alloc(40);
     const someSig = Buffer.from(
       "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa",
       "hex"
     );
-    eccrypto.sign(privateKey, longMsg).catch(function () {
-      eccrypto.verify(privateKey, longMsg, someSig).catch(function (e) {
-        expect(e.message).to.not.match(/bad signature/i);
-        done();
-      });
-    });
+
+    await expect(eccrypto.sign(privateKey, longMsg)).to.eventually.be.rejected;
+    await expect(
+      eccrypto.verify(privateKey, longMsg, someSig)
+    ).to.eventually.be.rejectedWith("Message is too long");
   });
 
-  it("shouldn't sign and verify empty messages", function (done) {
+  it("shouldn't sign and verify empty messages", async () => {
     const emptyMsg = Buffer.alloc(0);
     const someSig = Buffer.from(
       "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa",
       "hex"
     );
-    eccrypto.sign(privateKey, emptyMsg).catch(function () {
-      eccrypto.verify(publicKey, emptyMsg, someSig).catch(function (e) {
-        expect(e.message).to.not.match(/bad signature/i);
-        done();
-      });
-    });
+    await expect(eccrypto.sign(privateKey, emptyMsg)).to.eventually.be.rejected;
+    await expect(
+      eccrypto.verify(publicKey, emptyMsg, someSig)
+    ).to.eventually.be.rejectedWith("Message should not be empty");
   });
 });
 
-describe("ECDH", function () {
-  it("should derive shared secret from privkey A and pubkey B", function () {
-    return eccrypto.derive(privateKeyA, publicKeyB).then(function (Px) {
-      expect(Buffer.isBuffer(Px)).to.be.true;
-      expect(Px.length).to.equal(32);
-      expect(Px.toString("hex")).to.equal(
-        "aca78f27d5f23b2e7254a0bb8df128e7c0f922d47ccac72814501e07b7291886"
-      );
-      return eccrypto.derive(privateKeyB, publicKeyA).then(function (Px2) {
-        expect(Buffer.isBuffer(Px2)).to.be.true;
-        expect(Px2.length).to.equal(32);
-        expect(bufferEqual(Px, Px2)).to.be.true;
-      });
-    });
+describe("ECDH", () => {
+  it("should derive shared secret from privkey A and pubkey B", async () => {
+    const Px = await eccrypto.derive(privateKeyA, publicKeyB);
+
+    expect(Buffer.isBuffer(Px)).to.be.true;
+    expect(Px.length).to.equal(32);
+    expect(Px.toString("hex")).to.equal(
+      "aca78f27d5f23b2e7254a0bb8df128e7c0f922d47ccac72814501e07b7291886"
+    );
+
+    const Px2 = await eccrypto.derive(privateKeyB, publicKeyA);
+
+    expect(Buffer.isBuffer(Px2)).to.be.true;
+    expect(Px2.length).to.equal(32);
+    expect(bufferEqual(Px, Px2)).to.be.true;
   });
 
-  it("should derive shared secret from  privkey A and compressed pubkey B", function () {
-    return eccrypto
-      .derive(privateKeyA, publicKeyBCompressed)
-      .then(function (Px) {
-        expect(Buffer.isBuffer(Px)).to.be.true;
-        expect(Px.length).to.equal(32);
-        expect(Px.toString("hex")).to.equal(
-          "aca78f27d5f23b2e7254a0bb8df128e7c0f922d47ccac72814501e07b7291886"
-        );
-        return eccrypto.derive(privateKeyB, publicKeyA).then(function (Px2) {
-          expect(Buffer.isBuffer(Px2)).to.be.true;
-          expect(Px2.length).to.equal(32);
-          expect(bufferEqual(Px, Px2)).to.be.true;
-        });
-      });
+  it("should derive shared secret from  privkey A and compressed pubkey B", async () => {
+    const Px = await eccrypto.derive(privateKeyA, publicKeyBCompressed);
+
+    expect(Buffer.isBuffer(Px)).to.be.true;
+    expect(Px.length).to.equal(32);
+    expect(Px.toString("hex")).to.equal(
+      "aca78f27d5f23b2e7254a0bb8df128e7c0f922d47ccac72814501e07b7291886"
+    );
+
+    const Px2 = await eccrypto.derive(privateKeyB, publicKeyA);
+
+    expect(Buffer.isBuffer(Px2)).to.be.true;
+    expect(Px2.length).to.equal(32);
+    expect(bufferEqual(Px, Px2)).to.be.true;
   });
 
-  it("should reject promise on bad keys", function (done) {
-    eccrypto.derive(Buffer.from("test"), publicKeyB).catch(function () {
-      eccrypto.derive(publicKeyB, publicKeyB).catch(function () {
-        eccrypto.derive(privateKeyA, privateKeyA).catch(function () {
-          eccrypto.derive(privateKeyB, Buffer.from("test")).catch(function () {
-            done();
-          });
-        });
-      });
-    });
+  it("should reject promise on bad keys", async () => {
+    await expect(eccrypto.derive(Buffer.from("test"), publicKeyB)).to.eventually
+      .be.rejected;
+    await expect(eccrypto.derive(publicKeyB, publicKeyB)).to.eventually.be
+      .rejected;
+    await expect(eccrypto.derive(privateKeyA, privateKeyA)).to.eventually.be
+      .rejected;
+    await expect(eccrypto.derive(privateKeyB, Buffer.from("test"))).to
+      .eventually.be.rejected;
   });
 
-  it("should reject promise on bad arguments", function (done) {
-    eccrypto.derive({}, {}).catch(function (e) {
-      expect(e.message).to.match(/Bad private key/i);
-      done();
-    });
+  it("should reject promise on bad arguments", async () => {
+    await expect(eccrypto.derive({}, {})).to.eventually.be.rejectedWith(
+      /Bad private key/i
+    );
   });
 });
 
-describe("ECIES", function () {
+describe("ECIES", () => {
   const ephemPrivateKey = Buffer.alloc(32);
   ephemPrivateKey.fill(4);
   const ephemPublicKey = eccrypto.getPublic(ephemPrivateKey);
@@ -229,131 +220,113 @@ describe("ECIES", function () {
     mac: mac,
   };
 
-  it("should encrypt", function () {
-    return eccrypto
-      .encrypt(publicKeyB, Buffer.from("test"), encOpts)
-      .then(function (enc) {
-        expect(bufferEqual(enc.iv, iv)).to.be.true;
-        expect(bufferEqual(enc.ephemPublicKey, ephemPublicKey)).to.be.true;
-        expect(bufferEqual(enc.ciphertext, ciphertext)).to.be.true;
-        expect(bufferEqual(enc.mac, mac)).to.be.true;
-      });
+  it("should encrypt", async () => {
+    const enc = await eccrypto.encrypt(
+      publicKeyB,
+      Buffer.from("test"),
+      encOpts
+    );
+
+    expect(bufferEqual(enc.iv, iv)).to.be.true;
+    expect(bufferEqual(enc.ephemPublicKey, ephemPublicKey)).to.be.true;
+    expect(bufferEqual(enc.ciphertext, ciphertext)).to.be.true;
+    expect(bufferEqual(enc.mac, mac)).to.be.true;
   });
 
-  it("should decrypt", function () {
-    return eccrypto.decrypt(privateKeyB, decOpts).then(function (msg) {
-      expect(msg.toString()).to.equal("test");
-    });
+  it("should decrypt", async () => {
+    const msg = await eccrypto.decrypt(privateKeyB, decOpts);
+    expect(msg.toString()).to.equal("test");
   });
 
-  it("should encrypt and decrypt", function () {
-    return eccrypto
-      .encrypt(publicKeyA, Buffer.from("to a"))
-      .then(function (enc) {
-        return eccrypto.decrypt(privateKeyA, enc);
-      })
-      .then(function (msg) {
-        expect(msg.toString()).to.equal("to a");
-      });
+  it("should encrypt and decrypt", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("to a"));
+    const msg = await eccrypto.decrypt(privateKeyA, enc);
+    expect(msg.toString()).to.equal("to a");
   });
 
-  it("should encrypt and decrypt with message size > 15", function () {
-    return eccrypto
-      .encrypt(
-        publicKeyA,
-        Buffer.from("message size that is greater than 15 for sure =)")
-      )
-      .then(function (enc) {
-        return eccrypto.decrypt(privateKeyA, enc);
-      })
-      .then(function (msg) {
-        expect(msg.toString()).to.equal(
-          "message size that is greater than 15 for sure =)"
-        );
-      });
+  it("should encrypt and decrypt with message size > 15", async () => {
+    const enc = await eccrypto.encrypt(
+      publicKeyA,
+      Buffer.from("message size that is greater than 15 for sure =)")
+    );
+    const msg = await eccrypto.decrypt(privateKeyA, enc);
+    expect(msg.toString()).to.equal(
+      "message size that is greater than 15 for sure =)"
+    );
   });
 
-  it("should encrypt with compressed public key", function () {
-    return eccrypto
-      .encrypt(publicKeyBCompressed, Buffer.from("test"), encOpts)
-      .then(function (enc) {
-        expect(bufferEqual(enc.iv, iv)).to.be.true;
-        expect(bufferEqual(enc.ephemPublicKey, ephemPublicKey)).to.be.true;
-        expect(bufferEqual(enc.ciphertext, ciphertext)).to.be.true;
-        expect(bufferEqual(enc.mac, mac)).to.be.true;
-      });
+  it("should encrypt with compressed public key", async () => {
+    const enc = await eccrypto.encrypt(
+      publicKeyBCompressed,
+      Buffer.from("test"),
+      encOpts
+    );
+    expect(bufferEqual(enc.iv, iv)).to.be.true;
+    expect(bufferEqual(enc.ephemPublicKey, ephemPublicKey)).to.be.true;
+    expect(bufferEqual(enc.ciphertext, ciphertext)).to.be.true;
+    expect(bufferEqual(enc.mac, mac)).to.be.true;
   });
 
-  it("should encrypt and decrypt with compressed public key", function () {
-    return eccrypto
-      .encrypt(publicKeyACompressed, Buffer.from("to a"))
-      .then(function (enc) {
-        return eccrypto.decrypt(privateKeyA, enc);
-      })
-      .then(function (msg) {
-        expect(msg.toString()).to.equal("to a");
-      });
+  it("should encrypt and decrypt with compressed public key", async () => {
+    const enc = await eccrypto.encrypt(
+      publicKeyACompressed,
+      Buffer.from("to a")
+    );
+    const msg = await eccrypto.decrypt(privateKeyA, enc);
+    expect(msg.toString()).to.equal("to a");
   });
 
-  it("should encrypt and decrypt with generated private and public key", function () {
+  it("should encrypt and decrypt with generated private and public key", async () => {
     const privateKey = eccrypto.generatePrivate();
     const publicKey = eccrypto.getPublic(privateKey);
-    return eccrypto
-      .encrypt(publicKey, Buffer.from("generated private key"))
-      .then(function (enc) {
-        return eccrypto.decrypt(privateKey, enc);
-      })
-      .then(function (msg) {
-        expect(msg.toString()).to.equal("generated private key");
-      });
+    const enc = await eccrypto.encrypt(
+      publicKey,
+      Buffer.from("generated private key")
+    );
+    const msg = await eccrypto.decrypt(privateKey, enc);
+    expect(msg.toString()).to.equal("generated private key");
   });
 
-  it("should reject promise on bad private key when decrypting", function (done) {
-    eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      eccrypto.decrypt(privateKeyB, enc).catch(function () {
-        done();
-      });
-    });
+  it("should reject promise on bad private key when decrypting", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("test"));
+    await expect(eccrypto.decrypt(privateKeyB, enc)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on bad IV when decrypting", function (done) {
-    eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      enc.iv[0] ^= 1;
-      eccrypto.decrypt(privateKeyA, enc).catch(function () {
-        done();
-      });
-    });
+  it("should reject promise on bad IV when decrypting", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("test"));
+
+    enc.iv[0] ^= 1;
+
+    await expect(eccrypto.decrypt(privateKeyA, enc)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on bad R when decrypting", function (done) {
-    eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      enc.ephemPublicKey[0] ^= 1;
-      eccrypto.decrypt(privateKeyA, enc).catch(function () {
-        done();
-      });
-    });
+  it("should reject promise on bad R when decrypting", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("test"));
+
+    enc.ephemPublicKey[0] ^= 1;
+
+    await expect(eccrypto.decrypt(privateKeyA, enc)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on bad ciphertext when decrypting", function (done) {
-    eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      enc.ciphertext[0] ^= 1;
-      eccrypto.decrypt(privateKeyA, enc).catch(function () {
-        done();
-      });
-    });
+  it("should reject promise on bad ciphertext when decrypting", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("test"));
+
+    enc.ciphertext[0] ^= 1;
+
+    await expect(eccrypto.decrypt(privateKeyA, enc)).to.eventually.be.rejected;
   });
 
-  it("should reject promise on bad MAC when decrypting", function (done) {
-    eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      const origMac = enc.mac;
-      enc.mac = mac.slice(1);
-      eccrypto.decrypt(privateKeyA, enc).catch(function () {
-        enc.mac = origMac;
-        enc.mac[10] ^= 1;
-        eccrypto.decrypt(privateKeyA, enc).catch(function () {
-          done();
-        });
-      });
-    });
+  it("should reject promise on bad MAC when decrypting", async () => {
+    const enc = await eccrypto.encrypt(publicKeyA, Buffer.from("test"));
+    const origMac = enc.mac;
+
+    enc.mac = mac.subarray(1);
+
+    await expect(eccrypto.decrypt(privateKeyA, enc)).to.eventually.be.rejected;
+
+    enc.mac = origMac;
+    enc.mac[10] ^= 1;
+
+    await expect(eccrypto.decrypt(privateKeyA, enc)).to.eventually.be.rejected;
   });
 });
