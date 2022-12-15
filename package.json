@@ -6,7 +6,7 @@
   "browser": "browser.js",
   "scripts": {
     "install": "node-gyp rebuild",
-    "test": "mocha && jshint .",
+    "test": "mocha --bail && jshint .",
     "m": "mocha",
     "j": "jshint .",
     "prepublishOnly": "tsc index.js --declaration --allowJs --emitDeclarationOnly"
