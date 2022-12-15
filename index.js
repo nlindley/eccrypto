@@ -11,9 +11,9 @@ const EC_GROUP_ORDER = Buffer.from(
 );
 const ZERO32 = Buffer.alloc(32, 0);
 
-var crypto = require("crypto");
-var secp256k1 = require("secp256k1");
-var ecdh = require("./build/Release/ecdh");
+const crypto = require("crypto");
+const secp256k1 = require("secp256k1");
+const ecdh = require("./build/Release/ecdh");
 
 function isScalar(x) {
   return Buffer.isBuffer(x) && x.length === 32;
@@ -40,16 +40,18 @@ function sha512(msg) {
 }
 
 function aes256CbcEncrypt(iv, key, plaintext) {
-  var cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
-  var firstChunk = cipher.update(plaintext);
-  var secondChunk = cipher.final();
+  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  const firstChunk = cipher.update(plaintext);
+  const secondChunk = cipher.final();
+
   return Buffer.concat([firstChunk, secondChunk]);
 }
 
 function aes256CbcDecrypt(iv, key, ciphertext) {
-  var cipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
-  var firstChunk = cipher.update(ciphertext);
-  var secondChunk = cipher.final();
+  const cipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+  const firstChunk = cipher.update(ciphertext);
+  const secondChunk = cipher.final();
+
   return Buffer.concat([firstChunk, secondChunk]);
 }
 
@@ -62,17 +64,16 @@ function equalConstTime(b1, b2) {
   if (b1.length !== b2.length) {
     return false;
   }
-  var res = 0;
-  for (var i = 0; i < b1.length; i++) {
+  let res = 0;
+  for (let i = 0; i < b1.length; i++) {
     res |= b1[i] ^ b2[i]; // jshint ignore:line
   }
   return res === 0;
 }
 
 function pad32(msg) {
-  var buf;
   if (msg.length < 32) {
-    buf = Buffer.alloc(32);
+    const buf = Buffer.alloc(32);
     buf.fill(0);
     msg.copy(buf, 32 - msg.length);
     return buf;
@@ -87,7 +88,7 @@ function pad32(msg) {
  * @function
  */
 exports.generatePrivate = function () {
-  var privateKey = crypto.randomBytes(32);
+  let privateKey = crypto.randomBytes(32);
   while (!isValidPrivateKey(privateKey)) {
     privateKey = crypto.randomBytes(32);
   }
@@ -100,11 +101,11 @@ exports.generatePrivate = function () {
  * @return {Buffer} A 65-byte public key.
  * @function
  */
-var getPublic = (exports.getPublic = function (privateKey) {
+const getPublic = (exports.getPublic = function (privateKey) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
-  var compressed = secp256k1.publicKeyCreate(privateKey);
+  const compressed = secp256k1.publicKeyCreate(privateKey);
   return Buffer.from(secp256k1.publicKeyConvert(compressed, false));
 });
 
@@ -132,7 +133,7 @@ exports.signSync = function (privateKey, msg) {
   assert(msg.length > 0, "Message should not be empty");
   assert(msg.length <= 32, "Message is too long");
   msg = pad32(msg);
-  var sig = secp256k1.ecdsaSign(msg, privateKey).signature;
+  const sig = secp256k1.ecdsaSign(msg, privateKey).signature;
   return Buffer.from(secp256k1.signatureExport(sig));
 };
 
@@ -223,8 +224,8 @@ exports.derive = async function (privateKeyA, publicKeyB) {
 exports.encryptSync = function (publicKeyTo, msg, opts) {
   opts = opts || {};
   // Tmp variable to save context from flat promises;
-  var ephemPublicKey;
-  var ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
+  let ephemPublicKey;
+  let ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
   // There is a very unlikely possibility that it is not a valid key
   while (!isValidPrivateKey(ephemPrivateKey)) {
     ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
@@ -232,13 +233,13 @@ exports.encryptSync = function (publicKeyTo, msg, opts) {
   ephemPublicKey = getPublic(ephemPrivateKey);
   const px = exports.deriveSync(ephemPrivateKey, publicKeyTo);
 
-  var hash = sha512(px);
-  var iv = opts.iv || crypto.randomBytes(16);
-  var encryptionKey = hash.subarray(0, 32);
-  var macKey = hash.subarray(32);
-  var ciphertext = aes256CbcEncrypt(iv, encryptionKey, msg);
-  var dataToMac = Buffer.concat([iv, ephemPublicKey, ciphertext]);
-  var mac = hmacSha256(macKey, dataToMac);
+  const hash = sha512(px);
+  const iv = opts.iv || crypto.randomBytes(16);
+  const encryptionKey = hash.subarray(0, 32);
+  const macKey = hash.subarray(32);
+  const ciphertext = aes256CbcEncrypt(iv, encryptionKey, msg);
+  const dataToMac = Buffer.concat([iv, ephemPublicKey, ciphertext]);
+  const mac = hmacSha256(macKey, dataToMac);
 
   return {
     iv: iv,
@@ -274,15 +275,15 @@ exports.decryptSync = function (privateKey, opts) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   const px = exports.deriveSync(privateKey, opts.ephemPublicKey);
-  var hash = sha512(px);
-  var encryptionKey = hash.subarray(0, 32);
-  var macKey = hash.subarray(32);
-  var dataToMac = Buffer.concat([
+  const hash = sha512(px);
+  const encryptionKey = hash.subarray(0, 32);
+  const macKey = hash.subarray(32);
+  const dataToMac = Buffer.concat([
     opts.iv,
     opts.ephemPublicKey,
     opts.ciphertext,
   ]);
-  var realMac = hmacSha256(macKey, dataToMac);
+  const realMac = hmacSha256(macKey, dataToMac);
   assert(equalConstTime(opts.mac, realMac), "Bad MAC");
   return aes256CbcDecrypt(opts.iv, encryptionKey, opts.ciphertext);
 };

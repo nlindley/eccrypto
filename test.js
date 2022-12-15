@@ -1,26 +1,26 @@
-var expect = require("chai").expect;
-var createHash = require("crypto").createHash;
-var bufferEqual = require("buffer-equal");
-var eccrypto = require("./");
+const expect = require("chai").expect;
+const createHash = require("crypto").createHash;
+const bufferEqual = require("buffer-equal");
+const eccrypto = require("./");
 
-var msg = createHash("sha256").update("test").digest();
-var otherMsg = createHash("sha256").update("test2").digest();
-var shortMsg = createHash("sha1").update("test").digest();
+const msg = createHash("sha256").update("test").digest();
+const otherMsg = createHash("sha256").update("test2").digest();
+const shortMsg = createHash("sha1").update("test").digest();
 
-var privateKey = Buffer.alloc(32);
+const privateKey = Buffer.alloc(32);
 privateKey.fill(1);
-var publicKey = eccrypto.getPublic(privateKey);
-var publicKeyCompressed = eccrypto.getPublicCompressed(privateKey);
+const publicKey = eccrypto.getPublic(privateKey);
+const publicKeyCompressed = eccrypto.getPublicCompressed(privateKey);
 
-var privateKeyA = Buffer.alloc(32);
+const privateKeyA = Buffer.alloc(32);
 privateKeyA.fill(2);
-var publicKeyA = eccrypto.getPublic(privateKeyA);
-var publicKeyACompressed = eccrypto.getPublicCompressed(privateKeyA);
+const publicKeyA = eccrypto.getPublic(privateKeyA);
+const publicKeyACompressed = eccrypto.getPublicCompressed(privateKeyA);
 
-var privateKeyB = Buffer.alloc(32);
+const privateKeyB = Buffer.alloc(32);
 privateKeyB.fill(3);
-var publicKeyB = eccrypto.getPublic(privateKeyB);
-var publicKeyBCompressed = eccrypto.getPublicCompressed(privateKeyB);
+const publicKeyB = eccrypto.getPublic(privateKeyB);
+const publicKeyBCompressed = eccrypto.getPublicCompressed(privateKeyB);
 
 describe("Key conversion", function () {
   it("should allow to convert private key to public", function () {
@@ -76,12 +76,12 @@ describe("ECDSA", function () {
   });
 
   it("should reject promise on invalid key when signing", function (done) {
-    var k4 = Buffer.from("test");
-    var k192 = Buffer.from(
+    const k4 = Buffer.from("test");
+    const k192 = Buffer.from(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "hex"
     );
-    var k384 = Buffer.from(
+    const k384 = Buffer.from(
       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "hex"
     );
@@ -98,7 +98,7 @@ describe("ECDSA", function () {
     eccrypto.sign(privateKey, msg).then(function (sig) {
       expect(Buffer.isBuffer(sig)).to.be.true;
       eccrypto.verify(Buffer.from("test"), msg, sig).catch(function () {
-        var badKey = Buffer.alloc(65);
+        const badKey = Buffer.alloc(65);
         publicKey.copy(badKey);
         badKey[0] ^= 1;
         eccrypto.verify(badKey, msg, sig).catch(function () {
@@ -129,8 +129,8 @@ describe("ECDSA", function () {
   });
 
   it("shouldn't sign and verify messages longer than 32 bytes", function (done) {
-    var longMsg = Buffer.alloc(40);
-    var someSig = Buffer.from(
+    const longMsg = Buffer.alloc(40);
+    const someSig = Buffer.from(
       "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa",
       "hex"
     );
@@ -143,8 +143,8 @@ describe("ECDSA", function () {
   });
 
   it("shouldn't sign and verify empty messages", function (done) {
-    var emptyMsg = Buffer.alloc(0);
-    var someSig = Buffer.from(
+    const emptyMsg = Buffer.alloc(0);
+    const someSig = Buffer.from(
       "304402204737396b697e5a3400e3aedd203d8be89879f97708647252bd0c17752ff4c8f302201d52ef234de82ce0719679fa220334c83b80e21b8505a781d32d94a27d9310aa",
       "hex"
     );
@@ -211,18 +211,18 @@ describe("ECDH", function () {
 });
 
 describe("ECIES", function () {
-  var ephemPrivateKey = Buffer.alloc(32);
+  const ephemPrivateKey = Buffer.alloc(32);
   ephemPrivateKey.fill(4);
-  var ephemPublicKey = eccrypto.getPublic(ephemPrivateKey);
-  var iv = Buffer.alloc(16);
+  const ephemPublicKey = eccrypto.getPublic(ephemPrivateKey);
+  const iv = Buffer.alloc(16);
   iv.fill(5);
-  var ciphertext = Buffer.from("bbf3f0e7486b552b0e2ba9c4ca8c4579", "hex");
-  var mac = Buffer.from(
+  const ciphertext = Buffer.from("bbf3f0e7486b552b0e2ba9c4ca8c4579", "hex");
+  const mac = Buffer.from(
     "dbb14a9b53dbd6b763dba24dc99520f570cdf8095a8571db4bf501b535fda1ed",
     "hex"
   );
-  var encOpts = { ephemPrivateKey: ephemPrivateKey, iv: iv };
-  var decOpts = {
+  const encOpts = { ephemPrivateKey: ephemPrivateKey, iv: iv };
+  const decOpts = {
     iv: iv,
     ephemPublicKey: ephemPublicKey,
     ciphertext: ciphertext,
@@ -296,8 +296,8 @@ describe("ECIES", function () {
   });
 
   it("should encrypt and decrypt with generated private and public key", function () {
-    var privateKey = eccrypto.generatePrivate();
-    var publicKey = eccrypto.getPublic(privateKey);
+    const privateKey = eccrypto.generatePrivate();
+    const publicKey = eccrypto.getPublic(privateKey);
     return eccrypto
       .encrypt(publicKey, Buffer.from("generated private key"))
       .then(function (enc) {
@@ -345,7 +345,7 @@ describe("ECIES", function () {
 
   it("should reject promise on bad MAC when decrypting", function (done) {
     eccrypto.encrypt(publicKeyA, Buffer.from("test")).then(function (enc) {
-      var origMac = enc.mac;
+      const origMac = enc.mac;
       enc.mac = mac.slice(1);
       eccrypto.decrypt(privateKeyA, enc).catch(function () {
         enc.mac = origMac;
