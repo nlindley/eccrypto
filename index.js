@@ -15,11 +15,11 @@ const crypto = require("crypto");
 const secp256k1 = require("secp256k1");
 const ecdh = require("./build/Release/ecdh");
 
-function isScalar(x) {
+const isScalar = (x) => {
   return Buffer.isBuffer(x) && x.length === 32;
-}
+};
 
-function isValidPrivateKey(privateKey) {
+const isValidPrivateKey = (privateKey) => {
   if (!isScalar(privateKey)) {
     return false;
   }
@@ -27,40 +27,40 @@ function isValidPrivateKey(privateKey) {
     privateKey.compare(ZERO32) > 0 && // > 0
     privateKey.compare(EC_GROUP_ORDER) < 0
   ); // < G
-}
+};
 
-function assert(condition, message) {
+const assert = (condition, message) => {
   if (!condition) {
     throw new Error(message || "Assertion failed");
   }
-}
+};
 
-function sha512(msg) {
+const sha512 = (msg) => {
   return crypto.createHash("sha512").update(msg).digest();
-}
+};
 
-function aes256CbcEncrypt(iv, key, plaintext) {
+const aes256CbcEncrypt = (iv, key, plaintext) => {
   const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
   const firstChunk = cipher.update(plaintext);
   const secondChunk = cipher.final();
 
   return Buffer.concat([firstChunk, secondChunk]);
-}
+};
 
-function aes256CbcDecrypt(iv, key, ciphertext) {
+const aes256CbcDecrypt = (iv, key, ciphertext) => {
   const cipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
   const firstChunk = cipher.update(ciphertext);
   const secondChunk = cipher.final();
 
   return Buffer.concat([firstChunk, secondChunk]);
-}
+};
 
-function hmacSha256(key, msg) {
+const hmacSha256 = (key, msg) => {
   return crypto.createHmac("sha256", key).update(msg).digest();
-}
+};
 
 // Compare two buffers in constant time to prevent timing attacks.
-function equalConstTime(b1, b2) {
+const equalConstTime = (b1, b2) => {
   if (b1.length !== b2.length) {
     return false;
   }
@@ -69,9 +69,9 @@ function equalConstTime(b1, b2) {
     res |= b1[i] ^ b2[i]; // jshint ignore:line
   }
   return res === 0;
-}
+};
 
-function pad32(msg) {
+const pad32 = (msg) => {
   if (msg.length < 32) {
     const buf = Buffer.alloc(32);
     buf.fill(0);
@@ -80,14 +80,14 @@ function pad32(msg) {
   } else {
     return msg;
   }
-}
+};
 
 /**
  * Generate a new valid private key. Will use crypto.randomBytes as source.
  * @return {Buffer} A 32-byte private key.
  * @function
  */
-const generatePrivate = function () {
+const generatePrivate = () => {
   let privateKey = crypto.randomBytes(32);
   while (!isValidPrivateKey(privateKey)) {
     privateKey = crypto.randomBytes(32);
@@ -101,7 +101,7 @@ const generatePrivate = function () {
  * @return {Buffer} A 65-byte public key.
  * @function
  */
-const getPublic = function (privateKey) {
+const getPublic = (privateKey) => {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
@@ -112,7 +112,7 @@ const getPublic = function (privateKey) {
 /**
  * Get compressed version of public key.
  */
-const getPublicCompressed = function (privateKey) {
+const getPublicCompressed = (privateKey) => {
   // jshint ignore:line
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
@@ -127,7 +127,7 @@ const getPublicCompressed = function (privateKey) {
  * @return {Buffer} A promise that resolves with the
  * signature and rejects on bad key or message.
  */
-const signSync = function (privateKey, msg) {
+const signSync = (privateKey, msg) => {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   assert(msg.length > 0, "Message should not be empty");
@@ -144,7 +144,7 @@ const signSync = function (privateKey, msg) {
  * @return {Promise.<Buffer>} A promise that resolves with the
  * signature and rejects on bad key or message.
  */
-const sign = async function (privateKey, msg) {
+const sign = async (privateKey, msg) => {
   return signSync(privateKey, msg);
 };
 
@@ -156,7 +156,7 @@ const sign = async function (privateKey, msg) {
  * @return {null} A promise that resolves on correct signature
  * and rejects on bad key or signature.
  */
-const verifySync = function (publicKey, msg, sig) {
+const verifySync = (publicKey, msg, sig) => {
   assert(msg.length > 0, "Message should not be empty");
   assert(msg.length <= 32, "Message is too long");
   msg = pad32(msg);
@@ -176,7 +176,7 @@ const verifySync = function (publicKey, msg, sig) {
  * @return {Promise.<null>} A promise that resolves on correct signature
  * and rejects on bad key or signature.
  */
-const verify = async function (publicKey, msg, sig) {
+const verify = async (publicKey, msg, sig) => {
   return verifySync(publicKey, msg, sig);
 };
 
@@ -186,7 +186,7 @@ const verify = async function (publicKey, msg, sig) {
  * @param {Buffer} publicKeyB - Recipient's public key (65 bytes)
  * @return {Buffer} The derived shared secret (Px, 32 bytes).
  */
-const deriveSync = function (privateKeyA, publicKeyB) {
+const deriveSync = (privateKeyA, publicKeyB) => {
   assert(privateKeyA.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKeyA), "Bad private key");
   return ecdh.derive(privateKeyA, publicKeyB);
@@ -198,7 +198,7 @@ const deriveSync = function (privateKeyA, publicKeyB) {
  * @param {Buffer} publicKeyB - Recipient's public key (65 bytes)
  * @return {Promise.<Buffer>} The derived shared secret (Px, 32 bytes).
  */
-const derive = async function (privateKeyA, publicKeyB) {
+const derive = async (privateKeyA, publicKeyB) => {
   return deriveSync(privateKeyA, publicKeyB);
 };
 
@@ -221,7 +221,7 @@ const derive = async function (privateKeyA, publicKeyB) {
  * @return {Ecies} - A promise that resolves with the ECIES
  * structure on successful encryption and rejects on failure.
  */
-const encryptSync = function (publicKeyTo, msg, opts) {
+const encryptSync = (publicKeyTo, msg, opts) => {
   opts = opts || {};
   // Tmp variable to save context from flat promises;
   let ephemPublicKey;
@@ -259,7 +259,7 @@ const encryptSync = function (publicKeyTo, msg, opts) {
  * @return {Promise.<Ecies>} - A promise that resolves with the ECIES
  * structure on successful encryption and rejects on failure.
  */
-const encrypt = async function (publicKeyTo, msg, opts) {
+const encrypt = async (publicKeyTo, msg, opts) => {
   return encryptSync(publicKeyTo, msg, opts);
 };
 
@@ -271,7 +271,7 @@ const encrypt = async function (publicKeyTo, msg, opts) {
  * @return {Buffer} - A promise that resolves with the
  * plaintext on successful decryption and rejects on failure.
  */
-const decryptSync = function (privateKey, opts) {
+const decryptSync = (privateKey, opts) => {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   const px = deriveSync(privateKey, opts.ephemPublicKey);
@@ -296,7 +296,7 @@ const decryptSync = function (privateKey, opts) {
  * @return {Promise.<Buffer>} - A promise that resolves with the
  * plaintext on successful decryption and rejects on failure.
  */
-const decrypt = async function (privateKey, opts) {
+const decrypt = async (privateKey, opts) => {
   return decryptSync(privateKey, opts);
 };
 
