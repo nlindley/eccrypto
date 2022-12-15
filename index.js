@@ -11,8 +11,6 @@ const EC_GROUP_ORDER = Buffer.from(
 );
 const ZERO32 = Buffer.alloc(32, 0);
 
-var promise =
-  typeof Promise === "undefined" ? require("es6-promise").Promise : Promise;
 var crypto = require("crypto");
 var secp256k1 = require("secp256k1");
 var ecdh = require("./build/Release/ecdh");
@@ -107,7 +105,7 @@ var getPublic = (exports.getPublic = function (privateKey) {
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
   var compressed = secp256k1.publicKeyCreate(privateKey);
-  return secp256k1.publicKeyConvert(compressed, false);
+  return Buffer.from(secp256k1.publicKeyConvert(compressed, false));
 });
 
 /**
@@ -118,7 +116,7 @@ exports.getPublicCompressed = function (privateKey) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
-  return secp256k1.publicKeyCreate(privateKey);
+  return Buffer.from(secp256k1.publicKeyCreate(privateKey));
 };
 
 /**
@@ -129,14 +127,14 @@ exports.getPublicCompressed = function (privateKey) {
  * signature and rejects on bad key or message.
  */
 exports.sign = function (privateKey, msg) {
-  return new promise(function (resolve) {
+  return new Promise(function (resolve) {
     assert(privateKey.length === 32, "Bad private key");
     assert(isValidPrivateKey(privateKey), "Bad private key");
     assert(msg.length > 0, "Message should not be empty");
     assert(msg.length <= 32, "Message is too long");
     msg = pad32(msg);
-    var sig = secp256k1.sign(msg, privateKey).signature;
-    resolve(secp256k1.signatureExport(sig));
+    var sig = secp256k1.ecdsaSign(msg, privateKey).signature;
+    resolve(Buffer.from(secp256k1.signatureExport(sig)));
   });
 };
 
@@ -149,12 +147,12 @@ exports.sign = function (privateKey, msg) {
  * and rejects on bad key or signature.
  */
 exports.verify = function (publicKey, msg, sig) {
-  return new promise(function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     assert(msg.length > 0, "Message should not be empty");
     assert(msg.length <= 32, "Message is too long");
     msg = pad32(msg);
     sig = secp256k1.signatureImport(sig);
-    if (secp256k1.verify(msg, sig, publicKey)) {
+    if (secp256k1.ecdsaVerify(sig, msg, publicKey)) {
       resolve(null);
     } else {
       reject(new Error("Bad signature"));
@@ -170,7 +168,7 @@ exports.verify = function (publicKey, msg, sig) {
  * shared secret (Px, 32 bytes) and rejects on bad key.
  */
 var derive = (exports.derive = function (privateKeyA, publicKeyB) {
-  return new promise(function (resolve) {
+  return new Promise(function (resolve) {
     assert(privateKeyA.length === 32, "Bad private key");
     assert(isValidPrivateKey(privateKeyA), "Bad private key");
     resolve(ecdh.derive(privateKeyA, publicKeyB));
@@ -190,7 +188,7 @@ var derive = (exports.derive = function (privateKeyA, publicKeyB) {
  * Encrypt message for given recepient's public key.
  * @param {Buffer} publicKeyTo - Recipient's public key (65 bytes)
  * @param {Buffer} msg - The message being encrypted
- * @param {?{?iv: Buffer, ?ephemPrivateKey: Buffer}} [opts] - You may also
+ * @param {{iv?: Buffer, ephemPrivateKey?: Buffer}} [opts] - You may also
  * specify initialization vector (16 bytes) and ephemeral private key
  * (32 bytes) to get deterministic results.
  * @return {Promise.<Ecies>} - A promise that resolves with the ECIES
@@ -200,7 +198,7 @@ exports.encrypt = function (publicKeyTo, msg, opts) {
   opts = opts || {};
   // Tmp variable to save context from flat promises;
   var ephemPublicKey;
-  return new promise(function (resolve) {
+  return new Promise(function (resolve) {
     var ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
     // There is a very unlikely possibility that it is not a valid key
     while (!isValidPrivateKey(ephemPrivateKey)) {
@@ -215,7 +213,7 @@ exports.encrypt = function (publicKeyTo, msg, opts) {
     var macKey = hash.slice(32);
     var ciphertext = aes256CbcEncrypt(iv, encryptionKey, msg);
     var dataToMac = Buffer.concat([iv, ephemPublicKey, ciphertext]);
-    var mac = Buffer.from(hmacSha256(macKey, dataToMac));
+    var mac = hmacSha256(macKey, dataToMac);
     return {
       iv: iv,
       ephemPublicKey: ephemPublicKey,
