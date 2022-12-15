@@ -87,7 +87,7 @@ function pad32(msg) {
  * @return {Buffer} A 32-byte private key.
  * @function
  */
-exports.generatePrivate = function () {
+const generatePrivate = function () {
   let privateKey = crypto.randomBytes(32);
   while (!isValidPrivateKey(privateKey)) {
     privateKey = crypto.randomBytes(32);
@@ -101,18 +101,18 @@ exports.generatePrivate = function () {
  * @return {Buffer} A 65-byte public key.
  * @function
  */
-const getPublic = (exports.getPublic = function (privateKey) {
+const getPublic = function (privateKey) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   // See https://github.com/wanderer/secp256k1-node/issues/46
   const compressed = secp256k1.publicKeyCreate(privateKey);
   return Buffer.from(secp256k1.publicKeyConvert(compressed, false));
-});
+};
 
 /**
  * Get compressed version of public key.
  */
-exports.getPublicCompressed = function (privateKey) {
+const getPublicCompressed = function (privateKey) {
   // jshint ignore:line
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
@@ -127,7 +127,7 @@ exports.getPublicCompressed = function (privateKey) {
  * @return {Buffer} A promise that resolves with the
  * signature and rejects on bad key or message.
  */
-exports.signSync = function (privateKey, msg) {
+const signSync = function (privateKey, msg) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
   assert(msg.length > 0, "Message should not be empty");
@@ -144,8 +144,8 @@ exports.signSync = function (privateKey, msg) {
  * @return {Promise.<Buffer>} A promise that resolves with the
  * signature and rejects on bad key or message.
  */
-exports.sign = async function (privateKey, msg) {
-  return exports.signSync(privateKey, msg);
+const sign = async function (privateKey, msg) {
+  return signSync(privateKey, msg);
 };
 
 /**
@@ -156,7 +156,7 @@ exports.sign = async function (privateKey, msg) {
  * @return {null} A promise that resolves on correct signature
  * and rejects on bad key or signature.
  */
-exports.verifySync = function (publicKey, msg, sig) {
+const verifySync = function (publicKey, msg, sig) {
   assert(msg.length > 0, "Message should not be empty");
   assert(msg.length <= 32, "Message is too long");
   msg = pad32(msg);
@@ -176,8 +176,8 @@ exports.verifySync = function (publicKey, msg, sig) {
  * @return {Promise.<null>} A promise that resolves on correct signature
  * and rejects on bad key or signature.
  */
-exports.verify = async function (publicKey, msg, sig) {
-  return exports.verifySync(publicKey, msg, sig);
+const verify = async function (publicKey, msg, sig) {
+  return verifySync(publicKey, msg, sig);
 };
 
 /**
@@ -186,7 +186,7 @@ exports.verify = async function (publicKey, msg, sig) {
  * @param {Buffer} publicKeyB - Recipient's public key (65 bytes)
  * @return {Buffer} The derived shared secret (Px, 32 bytes).
  */
-exports.deriveSync = function (privateKeyA, publicKeyB) {
+const deriveSync = function (privateKeyA, publicKeyB) {
   assert(privateKeyA.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKeyA), "Bad private key");
   return ecdh.derive(privateKeyA, publicKeyB);
@@ -198,8 +198,8 @@ exports.deriveSync = function (privateKeyA, publicKeyB) {
  * @param {Buffer} publicKeyB - Recipient's public key (65 bytes)
  * @return {Promise.<Buffer>} The derived shared secret (Px, 32 bytes).
  */
-exports.derive = async function (privateKeyA, publicKeyB) {
-  return exports.deriveSync(privateKeyA, publicKeyB);
+const derive = async function (privateKeyA, publicKeyB) {
+  return deriveSync(privateKeyA, publicKeyB);
 };
 
 /**
@@ -221,7 +221,7 @@ exports.derive = async function (privateKeyA, publicKeyB) {
  * @return {Ecies} - A promise that resolves with the ECIES
  * structure on successful encryption and rejects on failure.
  */
-exports.encryptSync = function (publicKeyTo, msg, opts) {
+const encryptSync = function (publicKeyTo, msg, opts) {
   opts = opts || {};
   // Tmp variable to save context from flat promises;
   let ephemPublicKey;
@@ -231,7 +231,7 @@ exports.encryptSync = function (publicKeyTo, msg, opts) {
     ephemPrivateKey = opts.ephemPrivateKey || crypto.randomBytes(32);
   }
   ephemPublicKey = getPublic(ephemPrivateKey);
-  const px = exports.deriveSync(ephemPrivateKey, publicKeyTo);
+  const px = deriveSync(ephemPrivateKey, publicKeyTo);
 
   const hash = sha512(px);
   const iv = opts.iv || crypto.randomBytes(16);
@@ -259,8 +259,8 @@ exports.encryptSync = function (publicKeyTo, msg, opts) {
  * @return {Promise.<Ecies>} - A promise that resolves with the ECIES
  * structure on successful encryption and rejects on failure.
  */
-exports.encrypt = async function (publicKeyTo, msg, opts) {
-  return exports.encryptSync(publicKeyTo, msg, opts);
+const encrypt = async function (publicKeyTo, msg, opts) {
+  return encryptSync(publicKeyTo, msg, opts);
 };
 
 /**
@@ -271,10 +271,10 @@ exports.encrypt = async function (publicKeyTo, msg, opts) {
  * @return {Buffer} - A promise that resolves with the
  * plaintext on successful decryption and rejects on failure.
  */
-exports.decryptSync = function (privateKey, opts) {
+const decryptSync = function (privateKey, opts) {
   assert(privateKey.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKey), "Bad private key");
-  const px = exports.deriveSync(privateKey, opts.ephemPublicKey);
+  const px = deriveSync(privateKey, opts.ephemPublicKey);
   const hash = sha512(px);
   const encryptionKey = hash.subarray(0, 32);
   const macKey = hash.subarray(32);
@@ -296,6 +296,22 @@ exports.decryptSync = function (privateKey, opts) {
  * @return {Promise.<Buffer>} - A promise that resolves with the
  * plaintext on successful decryption and rejects on failure.
  */
-exports.decrypt = async function (privateKey, opts) {
-  return exports.decryptSync(privateKey, opts);
+const decrypt = async function (privateKey, opts) {
+  return decryptSync(privateKey, opts);
+};
+
+module.exports = {
+  generatePrivate,
+  getPublic,
+  getPublicCompressed,
+  signSync,
+  sign,
+  verifySync,
+  verify,
+  deriveSync,
+  derive,
+  encryptSync,
+  encrypt,
+  decryptSync,
+  decrypt,
 };
