@@ -5,7 +5,7 @@ JavaScript Elliptic curve cryptography library for Node.js.
 ## Implementation details
 
 - Use Node.js crypto module/library bindings where possible
-- Promise-driven API
+- Promise and Sync APIs
 - Only secp256k1 curve, only SHA-512 (KDF), HMAC-SHA-256 (HMAC) and AES-256-CBC for ECIES
 - Compressed key support
 
@@ -13,24 +13,24 @@ JavaScript Elliptic curve cryptography library for Node.js.
 
 #### crypto
 
-ECDH only works in Node 0.11+ (see https://github.com/joyent/node/pull/5854), ECDSA only supports keys in PEM format (see https://github.com/joyent/node/issues/6904) and ECIES is not supported at all.
+ECDH only works in Node 14+. ECDSA only supports keys in PEM format (see https://github.com/joyent/node/issues/6904), and ECIES is not supported at all.
 
 ## Usage
 
 ### ECDSA
 
 ```js
-var crypto = require("crypto");
-var eccrypto = require("@nlindley/eccrypto");
+const crypto = require("crypto");
+const eccrypto = require("@nlindley/eccrypto");
 
 // A new random 32-byte private key.
-var privateKey = eccrypto.generatePrivate();
+const privateKey = eccrypto.generatePrivate();
 // Corresponding uncompressed (65-byte) public key.
-var publicKey = eccrypto.getPublic(privateKey);
+const publicKey = eccrypto.getPublic(privateKey);
 
-var str = "message to sign";
+const str = "message to sign";
 // Always hash you message to sign!
-var msg = crypto.createHash("sha256").update(str).digest();
+const msg = crypto.createHash("sha256").update(str).digest();
 
 eccrypto.sign(privateKey, msg).then(function (sig) {
   console.log("Signature in DER format:", sig);
@@ -45,15 +45,41 @@ eccrypto.sign(privateKey, msg).then(function (sig) {
 });
 ```
 
+### ECDSA Sync
+
+```js
+const crypto = require("crypto");
+const eccrypto = require("@nlindley/eccrypto");
+
+// A new random 32-byte private key.
+const privateKey = eccrypto.generatePrivate();
+// Corresponding uncompressed (65-byte) public key.
+const publicKey = eccrypto.getPublic(privateKey);
+
+const str = "message to sign";
+// Always hash you message to sign!
+const msg = crypto.createHash("sha256").update(str).digest();
+
+const sig = eccrypto.signSync(privateKey, msg);
+console.log("Signature in DER format:", sig);
+
+try {
+  eccrypto.verifySync(publicKey, msg, sig);
+  console.log("Signature is OK");
+} catch {
+  console.log("Signature is BAD");
+}
+```
+
 ### ECDH
 
 ```js
-var eccrypto = require("@nlindley/eccrypto");
+const eccrypto = require("@nlindley/eccrypto");
 
-var privateKeyA = eccrypto.generatePrivate();
-var publicKeyA = eccrypto.getPublic(privateKeyA);
-var privateKeyB = eccrypto.generatePrivate();
-var publicKeyB = eccrypto.getPublic(privateKeyB);
+const privateKeyA = eccrypto.generatePrivate();
+const publicKeyA = eccrypto.getPublic(privateKeyA);
+const privateKeyB = eccrypto.generatePrivate();
+const publicKeyB = eccrypto.getPublic(privateKeyB);
 
 eccrypto.derive(privateKeyA, publicKeyB).then(function (sharedKey1) {
   eccrypto.derive(privateKeyB, publicKeyA).then(function (sharedKey2) {
@@ -62,7 +88,7 @@ eccrypto.derive(privateKeyA, publicKeyB).then(function (sharedKey1) {
 });
 ```
 
-### ECIES
+### ECDH Sync
 
 ```js
 var eccrypto = require("@nlindley/eccrypto");
@@ -71,6 +97,22 @@ var privateKeyA = eccrypto.generatePrivate();
 var publicKeyA = eccrypto.getPublic(privateKeyA);
 var privateKeyB = eccrypto.generatePrivate();
 var publicKeyB = eccrypto.getPublic(privateKeyB);
+
+const sharedKey1 = eccrypto.deriveSync(privateKeyA, publicKeyB);
+const sharedKey2 = eccrypto.deriveSync(privateKeyB, publicKeyA);
+
+console.log("Both shared keys are equal:", sharedKey1, sharedKey2);
+```
+
+### ECIES
+
+```js
+const eccrypto = require("@nlindley/eccrypto");
+
+const privateKeyA = eccrypto.generatePrivate();
+const publicKeyA = eccrypto.getPublic(privateKeyA);
+const privateKeyB = eccrypto.generatePrivate();
+const publicKeyB = eccrypto.getPublic(privateKeyB);
 
 // Encrypting the message for B.
 eccrypto
@@ -91,6 +133,31 @@ eccrypto
       console.log("Message to part A:", plaintext.toString());
     });
   });
+```
+
+### ECIES Sync
+
+```js
+const eccrypto = require("@nlindley/eccrypto");
+
+const privateKeyA = eccrypto.generatePrivate();
+const publicKeyA = eccrypto.getPublic(privateKeyA);
+const privateKeyB = eccrypto.generatePrivate();
+const publicKeyB = eccrypto.getPublic(privateKeyB);
+
+// Encrypting the message for B.
+const encrypted = eccrypto.encryptSync(publicKeyB, Buffer.from("msg to b"));
+
+// B decrypting the message.
+const plaintext = eccrypto.decryptSync(privateKeyB, encrypted);
+
+console.log("Message to part B:", plaintext.toString());
+
+// Encrypting the message for A.
+const encrypted2 = eccrypto.encryptSync(publicKeyA, Buffer.from("msg to a"));
+// A decrypting the message.
+const plaintext = eccrypto.decryptSync(privateKeyA, encrypted2);
+console.log("Message to part A:", plaintext.toString());
 ```
 
 ## License
