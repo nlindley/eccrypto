@@ -188,7 +188,7 @@ const verify = async (publicKey, msg, sig) => {
  * @param {Uint8Array} key
  * @returns {boolean}
  */
-const isCompressed = (key) => key.at(0) === 0x02;
+const isCompressed = (key) => key[0] === 0x02;
 
 /**
  * Derive shared secret for given private and public keys.
