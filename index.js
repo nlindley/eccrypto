@@ -13,7 +13,7 @@ const ZERO32 = Buffer.alloc(32, 0);
 
 const crypto = require("crypto");
 const secp256k1 = require("secp256k1");
-const ecdh = require("./build/Release/ecdh");
+const ecdh = require("ecdh");
 
 const isScalar = (x) => {
   return Buffer.isBuffer(x) && x.length === 32;
@@ -181,6 +181,16 @@ const verify = async (publicKey, msg, sig) => {
 };
 
 /**
+ * Test if the key is compressed or uncompressed.
+ * - An uncompressed key has a prefix byte of 0x04
+ * - A compressed key has a prefix byte of 0x02
+ *
+ * @param {Uint8Array} key
+ * @returns {boolean}
+ */
+const isCompressed = (key) => key.at(0) === 0x02;
+
+/**
  * Derive shared secret for given private and public keys.
  * @param {Buffer} privateKeyA - Sender's private key (32 bytes)
  * @param {Buffer} publicKeyB - Recipient's public key (65 bytes)
@@ -189,7 +199,15 @@ const verify = async (publicKey, msg, sig) => {
 const deriveSync = (privateKeyA, publicKeyB) => {
   assert(privateKeyA.length === 32, "Bad private key");
   assert(isValidPrivateKey(privateKeyA), "Bad private key");
-  return ecdh.derive(privateKeyA, publicKeyB);
+
+  const publicKey = isCompressed(publicKeyB)
+    ? Buffer.from(secp256k1.publicKeyConvert(publicKeyB, false))
+    : publicKeyB;
+
+  const curve = ecdh.getCurve("secp256k1");
+  const privKey = ecdh.PrivateKey.fromBuffer(curve, privateKeyA);
+  const pubKey = ecdh.PublicKey.fromBuffer(curve, publicKey.subarray(1));
+  return privKey.deriveSharedSecret(pubKey);
 };
 
 /**

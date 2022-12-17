@@ -5,7 +5,6 @@
   "main": "index.js",
   "browser": "browser.js",
   "scripts": {
-    "install": "node-gyp rebuild",
     "test": "mocha && eslint --format codeframe .",
     "m": "mocha",
     "j": "jshint .",
@@ -48,7 +47,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "nan": "2.17.0",
+    "ecdh": "^0.2.0",
     "secp256k1": "^4.0.3"
   },
   "types": "index.d.ts",
