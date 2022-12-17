@@ -12,8 +12,8 @@ const EC_GROUP_ORDER = Buffer.from(
 const ZERO32 = Buffer.alloc(32, 0);
 
 const crypto = require("crypto");
-const secp256k1 = require("secp256k1");
 const ecdh = require("ecdh");
+const secp256k1 = require("./secp256k1");
 
 const isScalar = (x) => {
   return Buffer.isBuffer(x) && x.length === 32;
