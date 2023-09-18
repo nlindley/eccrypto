@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repo is no longer maintained.
+
 # eccrypto
 
 JavaScript Elliptic curve cryptography library for Node.js. This only uses pure JS dependencies to avoid having to compile native modules. If you would prefer native modules, use v3.
